@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en" style="background-color: #1a1c2c;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Skillup</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="auth-body">
+    <nav class="game-hud">
+        <div class="hud-left">
+            <div class="player-stats">
+                <div class="player-level">
+                    <i class="fas fa-crown"></i>
+                    <span>Join Quest</span>
+                </div>
+            </div>
+        </div>
+        <div class="hud-center">
+            <div class="game-logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>SkillUp</span>
+            </div>
+        </div>
+        <div class="hud-right">
+            <a href="../index.html" class="hud-btn">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="quiz.html" class="hud-btn">
+                <i class="fas fa-scroll"></i>
+                <span>Quests</span>
+            </a>
+            <div class="auth-buttons">
+                <a href="login.html" class="btn btn-outline btn-glow active">
+                    <i class="fas fa-sign-in-alt"></i> Join Battle
+                </a>
+                <a href="signup.html" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> Create Hero
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="game-world">
+            <div class="floating-elements">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-graduation-cap"></i>
+                <i class="fas fa-trophy"></i>
+                <i class="fas fa-crown"></i>
+                <i class="fas fa-medal"></i>
+            </div>
+        </div>
+        <div class="auth-card">
+            <div class="level-indicator">
+                <div class="level-badge">
+                    <i class="fas fa-user-graduate"></i>
+                    <span>Level 1</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 0%"></div>
+                </div>
+            </div>
+            <h2>Welcome Back, Adventurer!</h2>
+            <p class="quest-text">Complete this quest to continue your learning journey</p>
+            <div id="errorMessage" class="error-message hidden"></div>
+            <form id="loginForm" class="auth-form">
+                <div class="form-group achievement">
+                    <div class="achievement-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="form-input">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                </div>
+                <div class="form-group achievement">
+                    <div class="achievement-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <div class="form-input">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-glow">
+                    <i class="fas fa-door-open"></i>
+                    Enter the Academy
+                </button>
+            </form>
+            
+            <div class="auth-divider">
+                <span>Choose Your Path</span>
+            </div>
+            
+            <button id="googleSignIn" class="btn btn-google btn-glow">
+                <i class="fab fa-google"></i>
+                Join with Google
+            </button>
+            
+            <div class="auth-links">
+                <a href="forgot-password.html" class="quest-link">
+                    <i class="fas fa-scroll"></i>
+                    Lost Your Spell (Password)?
+                </a>
+                <p>New to the Academy? 
+                    <a href="signup.html" class="quest-link">
+                        <i class="fas fa-wand-sparkles"></i>
+                        Begin Your Journey
+                    </a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loader"></div>
+        <p class="loading-text">Preparing your journey...</p>
+    </div>
+
+    <script type="module">
+        import { auth, db } from '../js/config.js';
+        import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+        import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+
+        const loginForm = document.getElementById('loginForm');
+        const googleSignInBtn = document.getElementById('googleSignIn');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const errorMessage = document.getElementById('errorMessage');
+        const progressBar = document.querySelector('.progress');
+        const googleProvider = new GoogleAuthProvider();
+
+        const showLoading = () => {
+            loadingOverlay.classList.remove('hidden');
+            progressBar.style.width = '30%';
+            setTimeout(() => {
+                progressBar.style.width = '60%';
+            }, 500);
+        };
+
+        const hideLoading = () => {
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                loadingOverlay.classList.add('hidden');
+                progressBar.style.width = '0%';
+            }, 500);
+        };
+
+        const showError = (message) => {
+            errorMessage.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            errorMessage.classList.remove('hidden');
+            errorMessage.classList.add('shake');
+            setTimeout(() => {
+                errorMessage.classList.remove('shake');
+                setTimeout(() => {
+                    errorMessage.classList.add('hidden');
+                }, 500);
+            }, 500);
+        };
+
+        const createUserProfile = async (userId, userData) => {
+            try {
+                const userRef = ref(db, `users/${userId}`);
+                const snapshot = await get(userRef);
+                
+                if (!snapshot.exists()) {
+                    await set(userRef, {
+                        // Basic Info
+                        email: userData.email,
+                        displayName: userData.displayName || 'Anonymous',
+                        photoURL: userData.photoURL || null,
+                        createdAt: new Date().toISOString(),
+                        lastActive: new Date().toISOString(),
+                        
+                        // Progress Stats
+                        level: 1,
+                        totalPoints: 0,
+                        quizzesTaken: 0,
+                        totalCorrectAnswers: 0,
+                        accuracy: 0,
+                        bestStreak: 0,
+                        currentStreak: 0,
+                        
+                        // Collections
+                        badges: {
+                            newcomer: { earned: true, date: new Date().toISOString() }
+                        },
+                        achievements: {},
+                        quizHistory: {},
+                        categoryProgress: {},
+                        
+                        // Leaderboard Stats
+                        weeklyPoints: 0,
+                        monthlyPoints: 0,
+                        allTimePoints: 0,
+                        rank: 'Novice'
+                    });
+                } else {
+                    // Update last login time
+                    await update(userRef, {
+                        lastActive: new Date().toISOString()
+                    });
+                }
+            } catch (error) {
+                console.error('Error creating/updating user profile:', error);
+                throw error;
+            }
+        };
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showLoading();
+
+            try {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+                
+                // Create or update the user profile with the login timestamp
+                await createUserProfile(user.uid, {
+                    email: user.email,
+                    displayName: user.displayName || 'Anonymous',
+                    photoURL: user.photoURL || null
+                });
+                
+                // Also update the leaderboard entry if it doesn't exist
+                const leaderboardRef = ref(db, `leaderboard/${user.uid}`);
+                const leaderboardSnapshot = await get(leaderboardRef);
+                
+                if (!leaderboardSnapshot.exists()) {
+                    await set(leaderboardRef, {
+                        displayName: user.displayName || 'Anonymous',
+                        photoURL: user.photoURL || null,
+                        points: 0,
+                        level: 1,
+                        lastUpdated: new Date().toISOString()
+                    });
+                }
+
+                window.location.href = 'profile.html';
+            } catch (error) {
+                hideLoading();
+                let errorMessage = error.message;
+                
+                // Make error messages more user-friendly
+                if (errorMessage.includes('auth/user-not-found')) {
+                    errorMessage = 'No account found with this email address';
+                } else if (errorMessage.includes('auth/wrong-password')) {
+                    errorMessage = 'Incorrect password. Please try again';
+                } else if (errorMessage.includes('auth/invalid-email')) {
+                    errorMessage = 'Please enter a valid email address';
+                } else if (errorMessage.includes('auth/too-many-requests')) {
+                    errorMessage = 'Too many failed login attempts. Please try again later';
+                }
+                
+                showError(errorMessage);
+                console.error('Login error:', error);
+            }
+        });
+
+        googleSignInBtn.addEventListener('click', async () => {
+            showLoading();
+
+            try {
+                // Configure Google provider
+                googleProvider.addScope('profile');
+                googleProvider.addScope('email');
+                googleProvider.setCustomParameters({
+                    prompt: 'select_account'
+                });
+                
+                // Attempt Google sign-in
+                const result = await signInWithPopup(auth, googleProvider);
+                const user = result.user;
+                
+                if (user) {
+                    // Create or update user profile in Realtime Database
+                    await createUserProfile(user.uid, {
+                        email: user.email,
+                        displayName: user.displayName || 'Anonymous',
+                        photoURL: user.photoURL || null
+                    });
+                    
+                    // Also update the leaderboard entry
+                    const leaderboardRef = ref(db, `leaderboard/${user.uid}`);
+                    const leaderboardSnapshot = await get(leaderboardRef);
+                    
+                    if (!leaderboardSnapshot.exists()) {
+                        await set(leaderboardRef, {
+                            displayName: user.displayName || 'Anonymous',
+                            photoURL: user.photoURL || null,
+                            points: 0,
+                            level: 1,
+                            lastUpdated: new Date().toISOString()
+                        });
+                    }
+                    
+                    window.location.href = 'profile.html';
+                }
+            } catch (error) {
+                hideLoading();
+                let errorMessage = error.message;
+                
+                if (errorMessage.includes('auth/popup-closed-by-user')) {
+                    errorMessage = 'Sign in was cancelled';
+                } else if (errorMessage.includes('auth/popup-blocked')) {
+                    errorMessage = 'Pop-up was blocked by the browser. Please allow pop-ups for this site.';
+                } else if (errorMessage.includes('auth/unauthorized-domain')) {
+                    errorMessage = 'Using localhost? Add it to your Firebase Auth domains in the Firebase console.';
+                } else {
+                    errorMessage = 'Google login failed. Please try again.';
+                }
+                
+                showError(errorMessage);
+                console.error('Google sign-in error:', error);
+            }
+        });
+
+        const floatingElements = document.querySelectorAll('.floating-elements i');
+        floatingElements.forEach((element, index) => {
+            element.style.animation = `float 3s ease-in-out ${index * 0.5}s infinite`;
+        });
+    </script>
+</body>
+</html>

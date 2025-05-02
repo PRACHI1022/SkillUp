@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SkillUp</title>
+    <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg">
+    <link rel="stylesheet" href="../css/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="floating-particles"></div>
+    
+    <nav class="game-nav">
+        <a href="../index.html" class="logo">
+            <i class="fas fa-graduation-cap"></i>
+            SkillUp
+        </a>
+        
+        <ul class="nav-links">
+            <li><a href="../index.html">Home</a></li>
+            <li><a href="quiz.html">Quizzes</a></li>
+            <li><a href="leaderboard.html">Leaderboard</a></li>
+            <li><a href="#" class="active">Profile</a></li>
+        </ul>
+        
+        <div class="user-info">
+            <div class="avatar">A</div>
+            <div class="user-stats">
+                <div class="level-badge">
+                    <span>LVL 1</span>
+                </div>
+                <div class="points">
+                    <i class="fas fa-star"></i>
+                    <span>0</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="profile-container">
+        <div class="user-profile-card">
+            <div class="profile-avatar">
+                <div class="profile-level-badge">1</div>
+            </div>
+            
+            <h2 class="profile-username">Username</h2>
+            <div class="profile-email">user@example.com</div>
+            
+            <div class="stats-container">
+                <div class="stat-card">
+                    <i class="fas fa-scroll"></i>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Quizzes Taken</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-bullseye"></i>
+                    <div class="stat-value">0%</div>
+                    <div class="stat-label">Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-fire"></i>
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Best Streak</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-crown"></i>
+                    <div class="stat-value">Novice</div>
+                    <div class="stat-label">Current Rank</div>
+                </div>
+            </div>
+            
+            <button id="logout-btn" class="btn btn-outline profile-edit-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+        </div>
+        
+        <div class="profile-content">
+            <div class="profile-tabs">
+                <div class="profile-tab active" data-tab="history-tab">Quiz History</div>
+                <div class="profile-tab" data-tab="categories-tab">Categories</div>
+                <div class="profile-tab" data-tab="achievements-tab">Achievements</div>
+                <div class="profile-tab" data-tab="badges-tab">Badges</div>
+            </div>
+            
+            <div id="history-tab" class="profile-tab-content active">
+                <h3 class="section-title">Quiz History</h3>
+                <div class="history-list">
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <p>No quiz history yet. Start taking quizzes to see your progress!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="categories-tab" class="profile-tab-content">
+                <h3 class="section-title">Category Progress</h3>
+                <div class="categories-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-folder"></i>
+                        <p>No category progress yet. Try different quiz categories!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="achievements-tab" class="profile-tab-content">
+                <h3 class="section-title">Achievements</h3>
+                <div class="achievements-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>No achievements yet. Keep playing to unlock them!</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="badges-tab" class="profile-tab-content">
+                <h3 class="section-title">Badges</h3>
+                <div class="badges-grid">
+                    <div class="empty-state">
+                        <i class="fas fa-award"></i>
+                        <p>No badges earned yet. Complete achievements to earn badges!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="toast-container"></div>
+    
+    <div class="loading-spinner">
+        <div class="spinner"></div>
+    </div>
+    
+    <script type="module" src="../js/profile.js"></script>
+<script type="module">
+import { auth, db } from '../js/config.js';
+import { ref, onValue } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-database.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        const userRef = ref(db, `users/${user.uid}`);
+        onValue(userRef, (snapshot) => {
+            const userData = snapshot.val();
+            if (userData) {
+                const levelBadge = document.querySelector('.level-badge span');
+                if (levelBadge) levelBadge.textContent = `LVL ${userData.level || 1}`;
+                const points = document.querySelector('.points span');
+                if (points) points.textContent = userData.totalPoints || userData.points || 0;
+                const avatar = document.querySelector('.avatar');
+                if (avatar) {
+                    if (userData.photoURL) {
+                        avatar.innerHTML = `<img src="${userData.photoURL}" alt="User avatar">`;
+                    } else if (userData.displayName) {
+                        avatar.textContent = userData.displayName.charAt(0);
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+</body>
+</html>
